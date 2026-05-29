@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>行政書士試験 対策アプリ</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --ok: #16a34a;
+      --ng: #dc2626;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    header {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb, #60a5fa);
+      color: white;
+      padding: 28px 18px;
+      text-align: center;
+    }
+    header h1 { margin: 0; font-size: 1.7rem; }
+    header p { margin: 8px 0 0; opacity: .95; }
+    main { max-width: 980px; margin: 24px auto; padding: 0 16px 48px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 820px) { .grid { grid-template-columns: 2fr 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+      padding: 20px;
+    }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    select, button {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 15px;
+      background: white;
+    }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      font-weight: 700;
+    }
+    button.secondary { background: white; color: var(--text); border-color: var(--border); }
+    button:hover { filter: brightness(.98); }
+    .tag { display: inline-block; font-size: 13px; color: var(--primary); background: #eff6ff; border-radius: 999px; padding: 4px 10px; margin-bottom: 10px; }
+    .question { font-size: 1.16rem; font-weight: 800; margin: 8px 0 18px; }
+    .choices { display: grid; gap: 10px; }
+    .choice {
+      text-align: left;
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      font-weight: 600;
+    }
+    .choice.correct { border-color: var(--ok); background: #f0fdf4; }
+    .choice.wrong { border-color: var(--ng); background: #fef2f2; }
+    .result { margin-top: 16px; padding: 14px; border-radius: 14px; display: none; }
+    .result.ok { display: block; background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .result.ng { display: block; background: #fef2f2; border: 1px solid #fecaca; }
+    .explain { margin-top: 10px; color: #374151; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat { background: #f9fafb; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .stat strong { display: block; font-size: 1.4rem; }
+    .bar { height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+    .bar > span { display: block; height: 100%; width: 0%; background: var(--primary); transition: .25s; }
+    .small { color: var(--muted); font-size: 14px; }
+    .list { padding-left: 18px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>行政書士試験 対策アプリ</h1>
+    <p>一問一答・解説・苦手問題復習・進捗保存</p>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <div class="toolbar">
+        <select id="category">
+          <option value="all">全科目</option>
+          <option value="憲法">憲法</option>
+          <option value="行政法">行政法</option>
+          <option value="民法">民法</option>
+          <option value="商法・会社法">商法・会社法</option>
+          <option value="一般知識">一般知識</option>
+          <option value="weak">苦手問題のみ</option>
+        </select>
+        <button id="nextBtn">次の問題</button>
+        <button class="secondary" id="resetBtn">成績リセット</button>
+      </div>
+
+      <div id="quiz">
+        <span class="tag" id="tag"></span>
+        <div class="question" id="question"></div>
+        <div class="choices" id="choices"></div>
+        <div id="result" class="result">
+          <strong id="judgement"></strong>
+          <div class="explain" id="explanation"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>学習状況</h2>
+      <div class="stats">
+        <div class="stat"><span class="small">解答数</span><strong id="answered">0</strong></div>
+        <div class="stat"><span class="small">正答率</span><strong id="accuracy">0%</strong></div>
+        <div class="stat"><span class="small">正解</span><strong id="correct">0</strong></div>
+        <div class="stat"><span class="small">苦手</span><strong id="weakCount">0</strong></div>
+      </div>
+      <div class="bar"><span id="progressBar"></span></div>
+      <p class="small">成績と苦手問題はこのブラウザに保存されます。</p>
+      <h3>使い方</h3>
+      <ol class="list small">
+        <li>科目を選ぶ</li>
+        <li>選択肢をクリック</li>
+        <li>解説を読んで次の問題へ</li>
+        <li>間違えた問題は「苦手問題のみ」で復習</li>
+      </ol>
+    </aside>
+  </main>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    category: "憲法",
+    question: "国会は、国権の最高機関であって、国の唯一の立法機関である。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "憲法41条そのものです。国会は国権の最高機関であり、国の唯一の立法機関です。"
+  },
+  {
+    id: 2,
+    category: "憲法",
+    question: "内閣総理大臣は、国会議員でなくても任命されることができる。",
+    choices: ["正しい", "誤り"],
+    answer: 1,
+    explanation: "内閣総理大臣は、国会議員の中から国会の議決で指名されます。"
+  },
+  {
+    id: 3,
+    category: "行政法",
+    question: "行政指導は、相手方の任意の協力によって実現されるものである。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "行政手続法上、行政指導は任意の協力を前提とします。強制してはなりません。"
+  },
+  {
+    id: 4,
+    category: "行政法",
+    question: "行政不服審査法における審査請求期間は、原則として処分があったことを知った日の翌日から3か月以内である。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "原則は、処分があったことを知った日の翌日から起算して3か月以内です。"
+  },
+  {
+    id: 5,
+    category: "民法",
+    question: "代理人が本人のためにすることを示さないでした意思表示は、原則として代理人自身のためにしたものとみなされる。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "顕名がない場合、原則として代理人自身の法律行為となります。ただし相手方が知り、または知ることができた場合は別です。"
+  },
+  {
+    id: 6,
+    category: "民法",
+    question: "時効の援用は、裁判上でのみ行う必要がある。",
+    choices: ["正しい", "誤り"],
+    answer: 1,
+    explanation: "時効の援用は裁判外でも可能です。内容証明などで意思表示することもあります。"
+  },
+  {
+    id: 7,
+    category: "商法・会社法",
+    question: "株式会社の株主は、原則として出資額を限度として責任を負う。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "株主有限責任の原則です。株主は会社債権者に直接責任を負うわけではありません。"
+  },
+  {
+    id: 8,
+    category: "一般知識",
+    question: "個人情報保護法における個人情報には、生存する個人に関する情報が含まれる。",
+    choices: ["正しい", "誤り"],
+    answer: 0,
+    explanation: "個人情報保護法の個人情報は、生存する個人に関する情報です。"
+  }
+];
+
+let current = null;
+let state = JSON.parse(localStorage.getItem("gyoseiState") || '{"answered":0,"correct":0,"weak":[]}');
+
+const el = id => document.getElementById(id);
+
+function save() { localStorage.setItem("gyoseiState", JSON.stringify(state)); }
+
+function updateStats() {
+  el("answered").textContent = state.answered;
+  el("correct").textContent = state.correct;
+  const acc = state.answered ? Math.round(state.correct / state.answered * 100) : 0;
+  el("accuracy").textContent = acc + "%";
+  el("weakCount").textContent = state.weak.length;
+  el("progressBar").style.width = Math.min(100, acc) + "%";
+}
+
+function pool() {
+  const cat = el("category").value;
+  if (cat === "weak") return questions.filter(q => state.weak.includes(q.id));
+  if (cat === "all") return questions;
+  return questions.filter(q => q.category === cat);
+}
+
+function nextQuestion() {
+  const p = pool();
+  el("result").className = "result";
+  el("judgement").textContent = "";
+  el("explanation").textContent = "";
+
+  if (!p.length) {
+    current = null;
+    el("tag").textContent = "問題なし";
+    el("question").textContent = "この条件に該当する問題がありません。";
+    el("choices").innerHTML = "";
+    return;
+  }
+  current = p[Math.floor(Math.random() * p.length)];
+  el("tag").textContent = current.category;
+  el("question").textContent = current.question;
+  el("choices").innerHTML = "";
+  current.choices.forEach((choice, index) => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = choice;
+    btn.onclick = () => answer(index, btn);
+    el("choices").appendChild(btn);
+  });
+}
+
+function answer(index) {
+  if (!current) return;
+  const buttons = [...document.querySelectorAll(".choice")];
+  buttons.forEach(b => b.disabled = true);
+  const ok = index === current.answer;
+  buttons[current.answer].classList.add("correct");
+  if (!ok) buttons[index].classList.add("wrong");
+
+  state.answered += 1;
+  if (ok) {
+    state.correct += 1;
+    state.weak = state.weak.filter(id => id !== current.id);
+    el("result").className = "result ok";
+    el("judgement").textContent = "正解！";
+  } else {
+    if (!state.weak.includes(current.id)) state.weak.push(current.id);
+    el("result").className = "result ng";
+    el("judgement").textContent = "不正解";
+  }
+  el("explanation").textContent = current.explanation;
+  save();
+  updateStats();
+}
+
+el("nextBtn").onclick = nextQuestion;
+el("category").onchange = nextQuestion;
+el("resetBtn").onclick = () => {
+  if (!confirm("成績をリセットしますか？")) return;
+  state = { answered: 0, correct: 0, weak: [] };
+  save();
+  updateStats();
+  nextQuestion();
+};
+
+updateStats();
+nextQuestion();
+</script>
+</body>
+</html>
